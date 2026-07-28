@@ -12,9 +12,6 @@ const geist = Geist({
 export const metadata: Metadata = {
   title: "Foliora",
   description: "Portfolio Generator Platform",
-  // icons: {
-  //   icon: "/icon.png",
-  // },
 };
 
 export default function RootLayout({

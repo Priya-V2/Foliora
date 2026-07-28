@@ -1,0 +1,619 @@
+// Prisma schema for Foliora
+// Conventions: docs/database.md (id: cuid, createdAt/updatedAt on every model,
+// soft delete via deletedAt on user-generated content models).
+//
+// Soft-delete policy (see architecture review, 2026-07-28):
+// `deletedAt` is applied to content the END USER creates and owns (portfolio
+// content, custom domains, uploaded resume). It is deliberately omitted from:
+//   - catalog/admin content (Template)         -> lifecycle uses `isActive`
+//   - external data caches (GithubRepository)   -> refreshed via upsert
+//   - security/session artifacts (RefreshToken) -> lifecycle uses `revokedAt`
+//   - immutable telemetry (PortfolioView)        -> governed by retention purge
+// Each model below states which bucket it falls into.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+  GITHUB
+}
+
+enum ResumeStatus {
+  UPLOADED
+  PARSING
+  PARSED
+  FAILED
+}
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum SkillCategory {
+  FRONTEND
+  BACKEND
+  DATABASE
+  CLOUD
+  DEVOPS
+  MOBILE
+  TOOLS
+  LANGUAGE
+  OTHER
+}
+
+enum SectionType {
+  HERO
+  ABOUT
+  PROJECTS
+  EXPERIENCE
+  SKILLS
+  EDUCATION
+  CERTIFICATIONS
+  ACHIEVEMENTS
+  BLOGS
+  TESTIMONIALS
+  CONTACT
+  SOCIAL_LINKS
+  CUSTOM // escape hatch for future section types that don't need a dedicated content model
+}
+
+enum PublishingStatus {
+  DRAFT
+  SCHEDULED // publishAt is set; a job flips this to PUBLISHING when due
+  PUBLISHING
+  PUBLISHED
+  ARCHIVED
+}
+
+enum DomainVerificationStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+enum SslStatus {
+  PENDING
+  ACTIVE
+  FAILED
+  EXPIRED
+}
+
+enum DeviceType {
+  DESKTOP
+  MOBILE
+  TABLET
+  BOT
+  OTHER
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  passwordHash String? // nullable: OAuth users authenticate without a local password
+  provider     AuthProvider @default(LOCAL)
+  avatar       String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime? // soft delete: user-owned account content
+
+  portfolio        Portfolio?
+  githubConnection GithubConnection?
+  resume           Resume?
+  refreshTokens    RefreshToken[]
+
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// ---------------------------------------------------------------------------
+// Refresh Tokens (session management)
+// ---------------------------------------------------------------------------
+
+// One row per active session/device (see architecture review for why
+// multi-session beats a single-token-per-user model). Tokens rotate on every
+// refresh: the old row is marked `revokedAt` and linked to its replacement
+// via `replacedByTokenId`, forming a lineage the auth service can walk to
+// detect reuse of an already-rotated token (a strong signal of theft) and
+// revoke the whole chain.
+//
+// No soft delete: `revokedAt` already carries the "inactive" semantics for
+// security auditing. Expired + revoked rows are hard-deleted by a periodic
+// cleanup job, not restored by users.
+model RefreshToken {
+  id                String    @id @default(cuid())
+  userId            String
+  hashedToken       String    @unique // SHA-256 of the token; the token itself is high-entropy so bcrypt is unnecessary
+  expiresAt         DateTime
+  revokedAt         DateTime?
+  replacedByTokenId String?   @unique
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedByToken RefreshToken? @relation("RefreshTokenRotation", fields: [replacedByTokenId], references: [id], onDelete: SetNull)
+  previousToken   RefreshToken? @relation("RefreshTokenRotation")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Template Catalog
+// ---------------------------------------------------------------------------
+
+// Catalog/admin content, not user-generated -> no `deletedAt`. Retirement is
+// modeled with `isActive` (hidden from selection, still renders for existing
+// portfolios); the FK from Portfolio uses onDelete: Restrict so a template in
+// use can never be hard-deleted out from under a live portfolio.
+model Template {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  description  String?  @db.Text
+  previewImage String?
+  thumbnail    String?
+  category     String // admin-managed taxonomy; a String (not enum) so new categories ship without a code deploy
+  tags         String[]
+  isPremium    Boolean  @default(false)
+  price        Decimal? @db.Decimal(10, 2) // null when isPremium is false
+  version      String   @default("1.0.0")
+  isActive     Boolean  @default(true)
+  isFeatured   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  portfolios Portfolio[]
+
+  @@index([category])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@map("templates")
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio
+// ---------------------------------------------------------------------------
+
+model Portfolio {
+  id         String     @id @default(cuid())
+  userId     String     @unique // enforces "every user owns exactly one portfolio" for MVP
+  title      String
+  slug       String     @unique
+  templateId String?
+  theme      Json?
+  visibility Visibility @default(PRIVATE)
+
+  publishingStatus   PublishingStatus @default(DRAFT)
+  publishedAt        DateTime? // first time this portfolio ever went live; immutable once set
+  lastPublishedAt    DateTime? // most recent successful publish; updated on every republish
+  lastDraftSavedAt   DateTime? // editor autosave watermark
+  scheduledPublishAt DateTime? // when PublishingStatus is SCHEDULED, the job due-time
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // soft delete
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template Template? @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  personalInfo   PersonalInfo?
+  sections       PortfolioSection[]
+  experiences    Experience[]
+  projects       Project[]
+  educations     Education[]
+  certifications Certification[]
+  achievements   Achievement[]
+  skills         Skill[]
+  blogs          Blog[]
+  testimonials   Testimonial[]
+  socialLinks    SocialLink[]
+  customDomains  CustomDomain[]
+  views          PortfolioView[]
+
+  @@index([deletedAt])
+  @@index([templateId])
+  @@index([publishingStatus, visibility])
+  @@map("portfolios")
+}
+
+model PersonalInfo {
+  id                String   @id @default(cuid())
+  portfolioId       String   @unique
+  fullName          String?
+  role              String?
+  headline          String?
+  bio               String?  @db.Text
+  location          String?
+  email             String?
+  phone             String?
+  website           String?
+  availability      String?
+  yearsOfExperience Int?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // No deletedAt: this is a 1:1 singleton sub-resource of Portfolio, not an
+  // independently listable/restorable item. Its lifecycle is fully owned by
+  // the parent Portfolio's soft delete.
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@map("personal_info")
+}
+
+// Presentation-only overlay: controls ordering, visibility, and custom
+// titling of a portfolio's sections. It never stores content itself - each
+// SectionType (HERO, ABOUT, CONTACT, ...) renders from its own content model
+// (PersonalInfo, Experience, Project, ...). This is what lets sections be
+// reordered, disabled, or retitled without touching the underlying content,
+// and lets new section types ship as an enum value instead of a migration
+// that reshapes Portfolio.
+//
+// No unique constraint on [portfolioId, sectionType]: well-known types are
+// expected to appear once per portfolio (enforced in the service layer), but
+// CUSTOM must be allowed to repeat for future ad-hoc sections.
+//
+// No deletedAt: rows hold no irreplaceable content, only display metadata.
+// `enabled` already gives users a reversible "hide" action; removing a row
+// entirely (e.g. deleting a CUSTOM section) is safe to hard-delete.
+model PortfolioSection {
+  id            String      @id @default(cuid())
+  portfolioId   String
+  sectionType   SectionType
+  enabled       Boolean     @default(true)
+  displayOrder  Int         @default(0)
+  customTitle   String?
+  configuration Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, displayOrder])
+  @@map("portfolio_sections")
+}
+
+model SocialLink {
+  id           String    @id @default(cuid())
+  portfolioId  String
+  platform     String
+  url          String
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft delete
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@map("social_links")
+}
+
+model Experience {
+  id           String    @id @default(cuid())
+  portfolioId  String
+  company      String
+  role         String
+  location     String?
+  description  String?   @db.Text
+  technologies String[]
+  achievements String[]
+  startDate    DateTime
+  endDate      DateTime?
+  current      Boolean   @default(false)
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft delete
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@map("experiences")
+}
+
+model Project {
+  id           String    @id @default(cuid())
+  portfolioId  String
+  title        String
+  description  String?   @db.Text
+  techStack    String[]
+  githubUrl    String?
+  demoUrl      String?
+  imageUrl     String?
+  featured     Boolean   @default(false)
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft delete
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  // Optional provenance link back to the GitHub repository this project was
+  // imported from. Import-time only, never live-synced: deleting the source
+  // GithubConnection/repository must NOT delete or break the Project (the
+  // architecture principle "portfolio projects are independent after
+  // import"), so this uses SetNull rather than Cascade or Restrict. It
+  // exists to support "resync stats" / dedupe-on-reimport UX later.
+  sourceRepositoryId String?
+  sourceRepository   GithubRepository? @relation(fields: [sourceRepositoryId], references: [id], onDelete: SetNull)
+
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@index([sourceRepositoryId])
+  @@map("projects")
+}
+
+model Skill {
+  id           String        @id @default(cuid())
+  portfolioId  String
+  name         String
+  category     SkillCategory
+  proficiency  Int?
+  displayOrder Int           @default(0)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime? // soft delete
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@unique([portfolioId, name])
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@index([category])
+  @@map("skills")
+}
+
+model Education {
+  id           String    @id @default(cuid())
+  portfolioId  String
+  institution  String
+  degree       String
+  fieldOfStudy String?
+  cgpa         Float?
+  startDate    DateTime
+  endDate      DateTime?
+  description  String?   @db.Text
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft delete
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@map("educations")
+}
+
+model Certification {
+  id            String    @id @default(cuid())
+  portfolioId   String
+  title         String
+  issuer        String
+  credentialId  String?
+  credentialUrl String?
+  issueDate     DateTime?
+  logoUrl       String?
+  displayOrder  Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // soft delete
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@map("certifications")
+}
+
+model Achievement {
+  id           String    @id @default(cuid())
+  portfolioId  String
+  title        String
+  description  String?   @db.Text
+  metric       String?
+  achievedAt   DateTime?
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft delete - added for consistency with other portfolio list content (Experience, Project, ...)
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@map("achievements")
+}
+
+model Blog {
+  id           String    @id @default(cuid())
+  portfolioId  String
+  title        String
+  summary      String?   @db.Text
+  thumbnail    String?
+  url          String
+  publishedAt  DateTime?
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft delete - added for consistency with other portfolio list content
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@map("blogs")
+}
+
+model Testimonial {
+  id           String    @id @default(cuid())
+  portfolioId  String
+  author       String
+  role         String?
+  company      String?
+  avatar       String?
+  review       String    @db.Text
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime? // soft delete - added for consistency with other portfolio list content
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, deletedAt, displayOrder])
+  @@map("testimonials")
+}
+
+// ---------------------------------------------------------------------------
+// Custom Domains
+// ---------------------------------------------------------------------------
+
+// User-generated content (the user's own domain configuration) -> soft
+// delete applies. NOTE: the unique constraint on `domain` combines with soft
+// delete to create a known edge case - a soft-deleted row still occupies the
+// unique slot, blocking re-registration (even by the original owner) until
+// the row is purged. Prisma's schema DSL cannot express a partial unique
+// index (`WHERE deletedAt IS NULL`); if this becomes a real problem, add one
+// by hand-editing the generated migration SQL, or purge soft-deleted domains
+// on a short retention window. Documented here rather than silently ignored.
+model CustomDomain {
+  id                 String                   @id @default(cuid())
+  portfolioId        String
+  domain             String                   @unique // full hostname a visitor types, e.g. "priya.dev" or "www.priya.dev"; service layer must lowercase before insert
+  subdomain          String? // parsed label used for DNS-instruction generation (e.g. "www"); null = apex/root domain
+  verificationStatus DomainVerificationStatus @default(PENDING)
+  verificationToken  String                   @unique @default(cuid()) // value the owner publishes as a DNS TXT record to prove domain ownership
+  sslStatus          SslStatus                @default(PENDING)
+  verifiedAt         DateTime?
+  dnsInstructions    Json?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  deletedAt          DateTime? // soft delete
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId])
+  @@index([verificationStatus])
+  @@index([deletedAt])
+  @@map("custom_domains")
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio Analytics
+// ---------------------------------------------------------------------------
+
+// Append-only event log, one row per page view. System-generated telemetry,
+// not user-generated content -> no soft delete and no `updatedAt` (a view
+// event is an immutable fact recorded once; `viewedAt` is its only
+// timestamp). Retention/cleanup is a hard purge job, not a user-facing undo.
+//
+// MVP-scoped deliberately: this raw table is fine up to a meaningful volume
+// of traffic via the indexes below. If dashboard queries become a
+// bottleneck at scale, add a separate pre-aggregated daily-rollup table fed
+// by a background job rather than widening this model - that's an additive
+// change, not a breaking one.
+model PortfolioView {
+  id          String     @id @default(cuid())
+  portfolioId String
+  sessionId   String // groups page views into a single visit (cookie/localStorage id)
+  visitorId   String? // longer-lived anonymous id for repeat-visitor detection, enables "unique visitors"
+  country     String?
+  device      DeviceType @default(OTHER)
+  browser     String?
+  os          String?
+  referrer    String?
+  viewedAt    DateTime   @default(now())
+
+  portfolio Portfolio @relation(fields: [portfolioId], references: [id], onDelete: Cascade)
+
+  @@index([portfolioId, viewedAt])
+  @@index([portfolioId, sessionId])
+  @@index([portfolioId, visitorId])
+  @@map("portfolio_views")
+}
+
+// ---------------------------------------------------------------------------
+// Resume
+// ---------------------------------------------------------------------------
+
+model Resume {
+  id            String       @id @default(cuid())
+  userId        String       @unique
+  fileName      String
+  fileUrl       String
+  extractedText String?      @db.Text
+  uploadedAt    DateTime     @default(now())
+  parsedAt      DateTime?
+  status        ResumeStatus @default(UPLOADED)
+  updatedAt     DateTime     @updatedAt
+  deletedAt     DateTime? // soft delete - lets a user undo "remove resume" within a grace window before the file is purged from storage
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("resumes")
+}
+
+// ---------------------------------------------------------------------------
+// GitHub Integration
+// ---------------------------------------------------------------------------
+
+// No soft delete: an OAuth connection is a live credential, not content.
+// Disconnecting should hard-delete it (and cascade the repo cache) rather
+// than leave a stale access token around - a dangling soft-deleted
+// credential is a security liability, not something a user restores.
+model GithubConnection {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  githubId             Int       @unique
+  username             String
+  avatar               String?
+  accessTokenEncrypted String // encrypted at rest by the service layer before persisting
+  connectedAt          DateTime  @default(now())
+  lastSyncedAt         DateTime? // when the repository cache below was last refreshed from the GitHub API
+  updatedAt            DateTime  @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repositories GithubRepository[]
+
+  @@map("github_connections")
+}
+
+// A refreshed cache/mirror of the user's GitHub repositories, not
+// user-generated content -> no soft delete; rows are upserted on each sync
+// and removed by re-sync when a repo disappears upstream, not "deleted" by
+// the user in the product sense.
+model GithubRepository {
+  id                 String   @id @default(cuid())
+  githubConnectionId String
+  repoId             Int      @unique // globally unique across GitHub, not just per-connection
+  name               String
+  description        String?  @db.Text
+  language           String?
+  stars              Int      @default(0)
+  forks              Int      @default(0)
+  url                String
+  selected           Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  githubConnection GithubConnection @relation(fields: [githubConnectionId], references: [id], onDelete: Cascade)
+  importedProjects Project[]
+
+  @@index([githubConnectionId])
+  @@map("github_repositories")
+}

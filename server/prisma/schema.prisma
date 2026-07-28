@@ -30,6 +30,11 @@ enum AuthProvider {
   GITHUB
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 enum ResumeStatus {
   UPLOADED
   PARSING
@@ -109,15 +114,18 @@ model User {
   email        String       @unique
   passwordHash String? // nullable: OAuth users authenticate without a local password
   provider     AuthProvider @default(LOCAL)
+  role         UserRole     @default(USER)
   avatar       String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   deletedAt    DateTime? // soft delete: user-owned account content
 
-  portfolio        Portfolio?
-  githubConnection GithubConnection?
-  resume           Resume?
-  refreshTokens    RefreshToken[]
+  portfolio           Portfolio?
+  githubConnection    GithubConnection?
+  resume              Resume?
+  refreshTokens       RefreshToken[]
+  verificationTokens  VerificationToken[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([deletedAt])
   @@map("users")
@@ -156,6 +164,44 @@ model RefreshToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("refresh_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Verification Tokens ( email verification )
+// ---------------------------------------------------------------------------
+
+model VerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("verification_tokens")
+}
+
+// ---------------------------------------------------------------------------
+// Password Reset Tokens
+// ---------------------------------------------------------------------------
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 // ---------------------------------------------------------------------------

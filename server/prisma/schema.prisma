@@ -115,6 +115,7 @@ model User {
   passwordHash String? // nullable: OAuth users authenticate without a local password
   provider     AuthProvider @default(LOCAL)
   role         UserRole     @default(USER)
+  isVerified   Boolean      @default(false) // local accounts must verify email before login; OAuth users are provider-verified (see AuthService)
   avatar       String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt

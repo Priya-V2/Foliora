@@ -7,7 +7,10 @@ import { DatabaseModule } from '../database/database.module';
 import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
 import { CookieService } from './services/cookie.service';
+import { EmailService } from './services/email.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 
 @Module({
   imports: [
@@ -38,7 +41,15 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       }),
     }),
   ],
-  providers: [PasswordService, TokenService, CookieService, JwtStrategy],
+  controllers: [AuthController],
+  providers: [
+    PasswordService,
+    TokenService,
+    CookieService,
+    EmailService,
+    JwtStrategy,
+    AuthService,
+  ],
   exports: [
     PasswordService,
     TokenService,

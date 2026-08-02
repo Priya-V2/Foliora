@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { CookieOptions, Response } from 'express';
+import type { CookieOptions, Request, Response } from 'express';
 
 // Controllers never build cookie options by hand — every refresh-token
 // cookie read/write goes through this service so dev/prod behavior
@@ -19,6 +19,14 @@ export class CookieService {
 
   clearRefreshTokenCookie(res: Response): void {
     res.clearCookie(this.getCookieName(), this.getCookieOptions());
+  }
+
+  // The only place a controller may read a refresh token: keeps the
+  // "never accept refresh tokens from body/query/header" rule enforced by
+  // construction rather than by convention.
+  getRefreshToken(req: Request): string | undefined {
+    const cookies = req.cookies as Record<string, string> | undefined;
+    return cookies?.[this.getCookieName()];
   }
 
   private getCookieName(): string {

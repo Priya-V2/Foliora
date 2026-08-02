@@ -8,6 +8,7 @@ import { PasswordService } from './services/password.service';
 import { TokenService } from './services/token.service';
 import { CookieService } from './services/cookie.service';
 import { EmailService } from './services/email.service';
+import { SessionService } from './services/session.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -47,6 +48,7 @@ import { AuthService } from './auth.service';
     TokenService,
     CookieService,
     EmailService,
+    SessionService,
     JwtStrategy,
     AuthService,
   ],
@@ -54,6 +56,7 @@ import { AuthService } from './auth.service';
     PasswordService,
     TokenService,
     CookieService,
+    SessionService,
     JwtModule,
     PassportModule,
     ThrottlerModule,

@@ -150,6 +150,12 @@ model RefreshToken {
   id                String    @id @default(cuid())
   userId            String
   hashedToken       String    @unique // SHA-256 of the token; the token itself is high-entropy so bcrypt is unnecessary
+  // Copied forward unchanged on every rotation (never reset to `now()`), so it
+  // marks when the session lineage began rather than when this particular row
+  // was created. This is what lets the absolute-session-lifetime check (90
+  // days, see auth.config.ts) be a single indexed comparison instead of
+  // walking the replacedByTokenId chain back to its root on every refresh.
+  sessionCreatedAt  DateTime  @default(now())
   expiresAt         DateTime
   revokedAt         DateTime?
   replacedByTokenId String?   @unique

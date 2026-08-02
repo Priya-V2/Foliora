@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
+import AuthProvider from "@/features/auth/components/AuthProvider";
 import ReduxProvider from "@/providers/redux-provider";
 import "@/lib/axiosInterceptor";
 
@@ -22,9 +24,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`h-full antialiased`}>
       <ReduxProvider>
-        <body className={`min-h-full flex flex-col ${geist.className}`}>
-          {children}
-        </body>
+        <AuthProvider>
+          <body className={`min-h-full flex flex-col ${geist.className}`}>
+            {children}
+            <Toaster position="top-right" richColors closeButton />
+          </body>
+        </AuthProvider>
       </ReduxProvider>
     </html>
   );

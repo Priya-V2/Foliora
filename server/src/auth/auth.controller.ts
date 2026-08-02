@@ -87,6 +87,18 @@ export class AuthController {
     return this.authService.getCurrentUser(currentUser.id);
   }
 
+  // Temporary endpoint for the auth test dashboard (client/src/app/dashboard).
+  // Verifies the full JWT + refresh flow end-to-end; remove alongside that
+  // page once the real dashboard lands.
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('ping')
+  ping(): MessageResponseDto {
+    return new MessageResponseDto(
+      'User successfully reached the protected endpoint.',
+    );
+  }
+
   @UseGuards(ThrottlerGuard)
   @HttpCode(HttpStatus.OK)
   @Post('refresh')

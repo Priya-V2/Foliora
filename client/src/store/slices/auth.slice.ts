@@ -2,6 +2,10 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { User } from "@/types/user.types";
 import { AuthState } from "@/types/auth.types";
 
+// isLoading starts true: the session hasn't been resolved yet on first
+// paint, so ProtectedRoute/PublicOnlyRoute must wait for the startup
+// refresh (see features/auth/components/AuthProvider.tsx) before deciding
+// whether to redirect.
 const initialState: AuthState = {
   user: null,
 
@@ -9,7 +13,7 @@ const initialState: AuthState = {
 
   isAuthenticated: false,
 
-  isLoading: false,
+  isLoading: true,
 };
 
 const authSlice = createSlice({
@@ -36,6 +40,10 @@ const authSlice = createSlice({
       state.accessToken = action.payload;
     },
 
+    setAuthLoading: (state, action: PayloadAction<boolean>) => {
+      state.isLoading = action.payload;
+    },
+
     clearAuth: (state) => {
       state.user = null;
 
@@ -46,7 +54,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, updateAccessToken, clearAuth } =
+export const { setCredentials, updateAccessToken, setAuthLoading, clearAuth } =
   authSlice.actions;
 
 export default authSlice.reducer;

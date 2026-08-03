@@ -125,14 +125,16 @@ function CheckYourEmail({ email }: { email: string }) {
       <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-surfaceAlt text-primary">
         <MailCheck size={28} />
       </div>
-      <h1 className="text-2xl font-bold text-text leading-tight mb-2">
-        Check your email
-      </h1>
-      <p className="text-sm text-textMuted leading-relaxed">
-        We&apos;ve sent a verification link to{" "}
-        <span className="font-medium text-text">{email}</span>. Click it to
-        activate your account.
-      </p>
+      <AuthCardHeader
+        title="Check your email"
+        subtitle={
+          <>
+            We&apos;ve sent a verification link to{" "}
+            <span className="font-medium text-text">{email}</span>. Click it
+            to activate your account.
+          </>
+        }
+      />
       <Link href="/login" className="mt-6 inline-block">
         <Button variant="secondary">Back to Log In</Button>
       </Link>

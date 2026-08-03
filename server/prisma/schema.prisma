@@ -42,6 +42,11 @@ enum ResumeStatus {
   FAILED
 }
 
+enum StorageProvider {
+  LOCAL
+  CLOUDINARY
+}
+
 enum Visibility {
   PUBLIC
   PRIVATE
@@ -605,16 +610,20 @@ model PortfolioView {
 // ---------------------------------------------------------------------------
 
 model Resume {
-  id            String       @id @default(cuid())
-  userId        String       @unique
-  fileName      String
-  fileUrl       String
-  extractedText String?      @db.Text
-  uploadedAt    DateTime     @default(now())
-  parsedAt      DateTime?
-  status        ResumeStatus @default(UPLOADED)
-  updatedAt     DateTime     @updatedAt
-  deletedAt     DateTime? // soft delete - lets a user undo "remove resume" within a grace window before the file is purged from storage
+  id              String           @id @default(cuid())
+  userId          String           @unique
+  fileName        String // original file name as uploaded by the user
+  fileType        String // MIME type, validated against the resume upload allow-list
+  fileSize        Int // bytes
+  storageProvider StorageProvider  @default(LOCAL)
+  storagePath     String // absolute path (LOCAL) or provider key, used to replace/delete the stored file
+  fileUrl         String
+  extractedText   String?          @db.Text
+  uploadedAt      DateTime         @default(now())
+  parsedAt        DateTime?
+  status          ResumeStatus     @default(UPLOADED)
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime? // soft delete - lets a user undo "remove resume" within a grace window before the file is purged from storage
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

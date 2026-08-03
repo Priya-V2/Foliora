@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import Button from "@/components/ui/Button";
+import { AuthCard, AuthCardHeader } from "@/features/auth/components/AuthCard";
 import ProtectedRoute from "@/features/auth/components/ProtectedRoute";
 import { useLogout } from "@/features/auth/hooks/useLogout";
 import authService from "@/services/auth.service";
@@ -20,7 +21,7 @@ function DashboardCard() {
     setIsPinging(true);
     try {
       const { message } = await authService.ping();
-      toast.success(`✅ ${message}`);
+      toast.success(`${message}`);
     } catch (err) {
       toast.error(
         getErrorMessage(err, "Unable to reach the protected endpoint."),
@@ -31,13 +32,11 @@ function DashboardCard() {
   }
 
   return (
-    <div className="w-full max-w-md bg-surface border border-border rounded-lg shadow-card p-8 text-center">
-      <h1 className="text-2xl font-bold text-text leading-tight mb-1.5">
-        Authentication Test Dashboard
-      </h1>
-      <p className="text-sm text-textMuted mb-7">
-        This page exists only to verify authentication.
-      </p>
+    <AuthCard className="text-center">
+      <AuthCardHeader
+        title="Authentication Test Dashboard"
+        subtitle="This page exists only to verify authentication."
+      />
 
       <div className="flex flex-col gap-3">
         <Button onClick={handlePing} isLoading={isPinging} fullWidth>
@@ -52,7 +51,7 @@ function DashboardCard() {
           Logout
         </Button>
       </div>
-    </div>
+    </AuthCard>
   );
 }
 

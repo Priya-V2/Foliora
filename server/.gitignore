@@ -3,3 +3,6 @@ node_modules
 .env
 
 /src/generated/prisma
+
+# Locally stored resume uploads (see docs/database.md storage notes)
+/uploads

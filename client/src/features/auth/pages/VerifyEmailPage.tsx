@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import Button from "@/components/ui/Button";
 import FormInput from "@/components/ui/FormInput";
 import Spinner from "@/components/ui/Spinner";
-import { AuthCard } from "../components/AuthCard";
+import { AuthCard, AuthCardHeader } from "../components/AuthCard";
 import AuthLayout from "../components/AuthLayout";
 import { useResendVerification } from "../hooks/useResendVerification";
 import { useVerifyEmail } from "../hooks/useVerifyEmail";
@@ -53,12 +53,10 @@ function SuccessState() {
         className="mx-auto mb-5 text-success"
         strokeWidth={1.5}
       />
-      <h1 className="text-2xl font-bold text-text leading-tight mb-2">
-        Email Verified
-      </h1>
-      <p className="text-sm text-textMuted leading-relaxed mb-6">
-        Your email has been verified successfully.
-      </p>
+      <AuthCardHeader
+        title="Email Verified"
+        subtitle="Your email has been verified successfully."
+      />
       <Link href="/login">
         <Button fullWidth>Continue to Login</Button>
       </Link>
@@ -74,9 +72,7 @@ function AlreadyVerifiedState() {
         className="mx-auto mb-5 text-primary"
         strokeWidth={1.5}
       />
-      <h1 className="text-2xl font-bold text-text leading-tight mb-6">
-        Email Already Verified
-      </h1>
+      <AuthCardHeader title="Email Already Verified" />
       <Link href="/login">
         <Button fullWidth>Login</Button>
       </Link>
@@ -106,12 +102,10 @@ function FailedState() {
         className="mx-auto mb-5 text-danger"
         strokeWidth={1.5}
       />
-      <h1 className="text-2xl font-bold text-text leading-tight mb-2">
-        Verification Failed
-      </h1>
-      <p className="text-sm text-textMuted leading-relaxed mb-6">
-        This verification link is invalid or has expired.
-      </p>
+      <AuthCardHeader
+        title="Verification Failed"
+        subtitle="This verification link is invalid or has expired."
+      />
 
       {!showResendForm && !isSent && (
         <div className="space-y-3">

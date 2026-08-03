@@ -23,16 +23,21 @@ export function AuthCard({ children, className }: AuthCardProps) {
 
 interface AuthCardHeaderProps {
   title: string;
-  subtitle: string;
+  subtitle?: React.ReactNode;
 }
 
 export function AuthCardHeader({ title, subtitle }: AuthCardHeaderProps) {
   return (
     <div className="text-center mb-7">
-      <h1 className="text-2xl font-bold text-text leading-tight mb-1.5">
+      <h1
+        className={cn(
+          "text-2xl font-bold text-text leading-tight",
+          subtitle && "mb-1.5",
+        )}
+      >
         {title}
       </h1>
-      <p className="text-sm text-textMuted">{subtitle}</p>
+      {subtitle && <p className="text-sm text-textMuted">{subtitle}</p>}
     </div>
   );
 }

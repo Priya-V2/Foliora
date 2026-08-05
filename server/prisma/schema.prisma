@@ -109,6 +109,20 @@ enum DeviceType {
   OTHER
 }
 
+enum AiProvider {
+  GEMINI
+}
+
+enum ParserStrategyType {
+  PDF_NATIVE
+  EXTRACTED_TEXT
+}
+
+enum ResumeParseRunStatus {
+  SUCCESS
+  FAILED
+}
+
 // ---------------------------------------------------------------------------
 // Identity
 // ---------------------------------------------------------------------------
@@ -625,9 +639,40 @@ model Resume {
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime? // soft delete - lets a user undo "remove resume" within a grace window before the file is purged from storage
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parseRuns ResumeParseRun[]
 
   @@map("resumes")
+}
+
+// Immutable log of one AI parsing attempt (Gemini call + validation), used
+// for debugging, benchmarking, prompt iteration, and strategy comparison
+// (see docs/database.md soft-delete policy: system telemetry, not
+// user-generated content -> no deletedAt, and it's never edited after
+// creation -> no updatedAt either, same bucket as PortfolioView).
+model ResumeParseRun {
+  id               String               @id @default(cuid())
+  resumeId         String
+  strategy         ParserStrategyType
+  provider         AiProvider           @default(GEMINI)
+  model            String
+  promptVersion    String
+  status           ResumeParseRunStatus
+  latencyMs        Int
+  inputTokens      Int?
+  outputTokens     Int?
+  totalTokens      Int?
+  estimatedCost    Decimal?             @db.Decimal(10, 6)
+  rawResponseJson  Json?
+  validationErrors Json?
+  errorMessage     String?              @db.Text
+  environment      String
+  createdAt        DateTime             @default(now())
+
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId])
+  @@map("resume_parse_runs")
 }
 
 // ---------------------------------------------------------------------------

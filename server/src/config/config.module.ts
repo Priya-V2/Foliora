@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule as NestConfigModule } from '@nestjs/config';
+import aiConfig from './ai.config';
 import authConfig from './auth.config';
 import mailConfig from './mail.config';
 import resumeConfig from './resume.config';
@@ -8,7 +9,7 @@ import resumeConfig from './resume.config';
   imports: [
     NestConfigModule.forRoot({
       isGlobal: true,
-      load: [authConfig, mailConfig, resumeConfig],
+      load: [authConfig, mailConfig, resumeConfig, aiConfig],
     }),
   ],
   exports: [NestConfigModule],

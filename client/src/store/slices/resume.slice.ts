@@ -1,11 +1,17 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { ResumeMetadata, ResumeUploadStatus } from "@/types/resume.types";
+import {
+  ResumeMetadata,
+  ResumeParseStatus,
+  ResumeUploadStatus,
+} from "@/types/resume.types";
 
 interface ResumeState {
   resume: ResumeMetadata | null;
   uploadProgress: number;
   uploadStatus: ResumeUploadStatus;
   error: string | null;
+  parseStatus: ResumeParseStatus;
+  parseError: string | null;
 }
 
 const initialState: ResumeState = {
@@ -13,6 +19,8 @@ const initialState: ResumeState = {
   uploadProgress: 0,
   uploadStatus: "idle",
   error: null,
+  parseStatus: "idle",
+  parseError: null,
 };
 
 const resumeSlice = createSlice({
@@ -42,6 +50,14 @@ const resumeSlice = createSlice({
       state.uploadStatus = "idle";
       state.error = null;
     },
+
+    setParseStatus: (state, action: PayloadAction<ResumeParseStatus>) => {
+      state.parseStatus = action.payload;
+    },
+
+    setParseError: (state, action: PayloadAction<string | null>) => {
+      state.parseError = action.payload;
+    },
   },
 });
 
@@ -51,6 +67,8 @@ export const {
   setUploadStatus,
   setUploadError,
   resetUploadState,
+  setParseStatus,
+  setParseError,
 } = resumeSlice.actions;
 
 export default resumeSlice.reducer;

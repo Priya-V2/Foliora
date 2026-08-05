@@ -41,6 +41,20 @@ export class ResumeController {
     return this.resumeService.uploadResume(user.id, file);
   }
 
+  @Post('parse')
+  parseResume(
+    @CurrentUser() user: CurrentUserData,
+  ): Promise<ResumeResponseDto> {
+    return this.resumeService.parseResume(user.id);
+  }
+
+  // Same underlying pipeline as parse - re-running it already replaces any
+  // previously-saved Portfolio data, so retry needs no special-casing.
+  @Post('retry')
+  retryParse(@CurrentUser() user: CurrentUserData): Promise<ResumeResponseDto> {
+    return this.resumeService.parseResume(user.id);
+  }
+
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete()
   async deleteResume(@CurrentUser() user: CurrentUserData): Promise<void> {

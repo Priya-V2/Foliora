@@ -31,10 +31,22 @@ async function deleteResume(): Promise<void> {
   await api.delete("/resume");
 }
 
+async function parseResume(): Promise<ResumeMetadata> {
+  const { data } = await api.post<ResumeMetadata>("/resume/parse");
+  return data;
+}
+
+async function retryParse(): Promise<ResumeMetadata> {
+  const { data } = await api.post<ResumeMetadata>("/resume/retry");
+  return data;
+}
+
 const resumeService = {
   getResume,
   uploadResume,
   deleteResume,
+  parseResume,
+  retryParse,
 };
 
 export default resumeService;

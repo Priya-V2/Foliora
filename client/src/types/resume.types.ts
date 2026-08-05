@@ -11,3 +11,9 @@ export interface ResumeMetadata {
 }
 
 export type ResumeUploadStatus = "idle" | "uploading" | "success" | "error";
+
+export type ResumeParseStatus =
+  | "idle"
+  | "processing"
+  | "success"
+  | "error";

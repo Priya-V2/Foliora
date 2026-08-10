@@ -14,7 +14,7 @@ export default function PageDescription({
   return (
     <p
       className={cn(
-        "mt-3 text-base leading-7 text-textMuted sm:mt-4",
+        "mt-3 text-base leading-6 text-textMuted sm:mt-3",
         className,
       )}
     >

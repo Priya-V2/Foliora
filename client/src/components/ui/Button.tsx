@@ -8,9 +8,13 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-primary text-white hover:bg-primary/90",
+        primary: "bg-primary text-white hover:bg-primary/90 px-6",
         secondary:
           "bg-surface border border-border text-text hover:bg-surfaceAlt px-6",
+        danger: "bg-danger text-white hover:bg-danger/90 px-6",
+        ghost: "bg-transparent text-text hover:bg-surfaceAlt px-6",
+        dashed:
+          "border border-dashed border-border bg-transparent text-primary hover:bg-surfaceAlt px-6",
       },
       fullWidth: {
         true: "w-full",

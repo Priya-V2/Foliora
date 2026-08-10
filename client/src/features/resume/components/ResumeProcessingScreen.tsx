@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, CircleAlert, Loader2, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
 import ProtectedRoute from "@/features/auth/components/ProtectedRoute";
 import { PROCESSING_STAGES, useResumeParsing } from "../hooks/useResumeParsing";
 
 export default function ResumeProcessingScreen() {
+  const router = useRouter();
   const { stageIndex, status, error, retry } = useResumeParsing();
 
   return (
@@ -54,8 +56,11 @@ export default function ResumeProcessingScreen() {
               </h1>
               <p className="mt-2 max-w-md text-sm text-textMuted">
                 We&apos;ve extracted your experience, education, and skills
-                from your resume.
+                from your resume. Review it before continuing.
               </p>
+              <Button className="mt-8" onClick={() => router.push("/onboarding/resume/review")}>
+                Review Your Data
+              </Button>
             </>
           ) : (
             <>

@@ -9,7 +9,7 @@ import {
   ResumeParseRunStatus,
 } from '../../generated/prisma';
 import { GeminiProvider } from '../providers/gemini.provider';
-import { RESUME_PROMPT_V2, RESUME_PROMPT_VERSION } from '../prompts/resume/v2';
+import { RESUME_PROMPT_V3, RESUME_PROMPT_VERSION } from '../prompts/resume/v3';
 import {
   PORTFOLIO_RESPONSE_JSON_SCHEMA,
   portfolioSchema,
@@ -133,7 +133,7 @@ export class ResumeParserService {
       const result = await strategy.parse({
         fileBuffer,
         mimeType: resume.fileType,
-        prompt: RESUME_PROMPT_V2,
+        prompt: RESUME_PROMPT_V3,
         responseJsonSchema: PORTFOLIO_RESPONSE_JSON_SCHEMA,
       });
       rawText = result.generation.text;

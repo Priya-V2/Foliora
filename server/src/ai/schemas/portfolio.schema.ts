@@ -18,6 +18,16 @@ import { SkillCategory } from '../../generated/prisma';
 // spending output tokens on "" / [] placeholders. utils/normalizer.ts is
 // responsible for turning "absent" into the concrete default each field
 // needs before persistence.
+//
+// As of v3 (RESUME_PROMPT_V3), "skills" and "socialLinks" are grouped
+// objects rather than arrays of {name/platform, ...} records - this avoids
+// repeating the "category"/"platform" key for every single entry, which was
+// a meaningful share of output tokens. utils/normalizer.ts flattens both
+// back into the same NormalizedSkill[]/NormalizedSocialLink[] shapes the
+// resume mapper already expects, so nothing downstream of the AI module
+// changes. Skill.proficiency is no longer requested from the AI (the
+// grouped shape has no room for a per-skill scalar) and is always
+// normalized to null - see the trade-off note in normalizer.ts.
 
 const optionalText = z.string().optional();
 
@@ -33,10 +43,49 @@ const personalInfoSchema = z.object({
   availability: optionalText,
 });
 
-const skillSchema = z.object({
-  name: z.string(),
-  category: z.nativeEnum(SkillCategory).catch(SkillCategory.OTHER),
-  proficiency: z.number().int().min(0).max(100).optional(),
+// Grouped skill categories: object keys instead of a repeated "category"
+// field per entry. Keys mirror the SkillCategory enum, lowercased.
+export const SKILL_CATEGORY_KEYS = [
+  'frontend',
+  'backend',
+  'database',
+  'cloud',
+  'devops',
+  'mobile',
+  'tools',
+  'language',
+  'other',
+] as const;
+
+export type SkillCategoryKey = (typeof SKILL_CATEGORY_KEYS)[number];
+
+export const SKILL_CATEGORY_KEY_TO_ENUM: Record<
+  SkillCategoryKey,
+  SkillCategory
+> = {
+  frontend: SkillCategory.FRONTEND,
+  backend: SkillCategory.BACKEND,
+  database: SkillCategory.DATABASE,
+  cloud: SkillCategory.CLOUD,
+  devops: SkillCategory.DEVOPS,
+  mobile: SkillCategory.MOBILE,
+  tools: SkillCategory.TOOLS,
+  language: SkillCategory.LANGUAGE,
+  other: SkillCategory.OTHER,
+};
+
+const skillNameListSchema = z.array(z.string());
+
+const groupedSkillsSchema = z.object({
+  frontend: skillNameListSchema.optional(),
+  backend: skillNameListSchema.optional(),
+  database: skillNameListSchema.optional(),
+  cloud: skillNameListSchema.optional(),
+  devops: skillNameListSchema.optional(),
+  mobile: skillNameListSchema.optional(),
+  tools: skillNameListSchema.optional(),
+  language: skillNameListSchema.optional(),
+  other: skillNameListSchema.optional(),
 });
 
 const experienceSchema = z.object({
@@ -88,20 +137,54 @@ const achievementSchema = z.object({
   achievedAt: optionalText,
 });
 
-const socialLinkSchema = z.object({
-  platform: z.string(),
-  url: z.string(),
+// Grouped social links: a single object keyed by platform instead of an
+// array of {platform, url} records.
+export const SOCIAL_PLATFORM_KEYS = [
+  'github',
+  'linkedin',
+  'portfolio',
+  'twitter',
+  'leetcode',
+  'hackerrank',
+  'codeforces',
+  'codechef',
+] as const;
+
+export type SocialPlatformKey = (typeof SOCIAL_PLATFORM_KEYS)[number];
+
+// Display label persisted to SocialLink.platform (a free-text column) for
+// each grouped key - keeps stored records human-readable.
+export const SOCIAL_PLATFORM_LABELS: Record<SocialPlatformKey, string> = {
+  github: 'GitHub',
+  linkedin: 'LinkedIn',
+  portfolio: 'Portfolio',
+  twitter: 'Twitter',
+  leetcode: 'LeetCode',
+  hackerrank: 'HackerRank',
+  codeforces: 'Codeforces',
+  codechef: 'CodeChef',
+};
+
+const groupedSocialLinksSchema = z.object({
+  github: optionalText,
+  linkedin: optionalText,
+  portfolio: optionalText,
+  twitter: optionalText,
+  leetcode: optionalText,
+  hackerrank: optionalText,
+  codeforces: optionalText,
+  codechef: optionalText,
 });
 
 export const portfolioSchema = z.object({
   personalInfo: personalInfoSchema,
-  skills: z.array(skillSchema).optional(),
+  skills: groupedSkillsSchema.optional(),
   experience: z.array(experienceSchema).optional(),
   projects: z.array(projectSchema).optional(),
   education: z.array(educationSchema).optional(),
   certifications: z.array(certificationSchema).optional(),
   achievements: z.array(achievementSchema).optional(),
-  socialLinks: z.array(socialLinkSchema).optional(),
+  socialLinks: groupedSocialLinksSchema.optional(),
 });
 
 export type PortfolioParseData = z.infer<typeof portfolioSchema>;

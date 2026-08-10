@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
-import { ArrowLeft, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
 import PageLayout from "@/components/layout/PageLayout";
 import PageSection from "@/components/layout/PageSection";
@@ -31,20 +30,12 @@ function UploadResumeCard() {
   return (
     <PageLayout header={<PageHeader />}>
       <SectionContainer width="narrow">
-        <Link
-          href="/onboarding"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-textMuted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          <ArrowLeft size={16} aria-hidden="true" />
-          Back
-        </Link>
-
         <div className="mt-3 sm:mt-4">
           <PageTitle>Upload your resume</PageTitle>
           <PageDescription>
             We&apos;ll securely store your resume so you can build your
-            portfolio from it. You&apos;ll review everything before anything
-            is published.
+            portfolio from it. You&apos;ll review everything before anything is
+            published.
           </PageDescription>
         </div>
 
@@ -70,8 +61,8 @@ function UploadResumeCard() {
               </p>
               <p className="mt-1 text-xs text-textMuted sm:text-sm">
                 Your resume is stored securely and only accessible to you.
-                Nothing is published automatically. You&apos;ll review and
-                edit everything before creating your portfolio.
+                Nothing is published automatically. You&apos;ll review and edit
+                everything before creating your portfolio.
               </p>
             </div>
           </div>

@@ -1,4 +1,10 @@
-import { PortfolioParseData } from '../schemas/portfolio.schema';
+import {
+  PortfolioParseData,
+  SKILL_CATEGORY_KEY_TO_ENUM,
+  SKILL_CATEGORY_KEYS,
+  SOCIAL_PLATFORM_KEYS,
+  SOCIAL_PLATFORM_LABELS,
+} from '../schemas/portfolio.schema';
 import {
   NormalizedAchievement,
   NormalizedCertification,
@@ -229,28 +235,49 @@ function normalizeAchievements(
   }));
 }
 
-function normalizeSocialLinks(
-  items: PortfolioParseData['socialLinks'],
+// Flattens the grouped {frontend: [...], backend: [...], ...} shape (v3
+// prompt) back into the flat NormalizedSkill[] the resume mapper expects.
+// Proficiency is never asked of the AI in the grouped shape, so it is
+// always null here - see the trade-off note in schemas/portfolio.schema.ts.
+function flattenGroupedSkills(
+  grouped: PortfolioParseData['skills'],
+): NormalizedSkill[] {
+  if (!grouped) return [];
+  const skills: NormalizedSkill[] = [];
+  for (const key of SKILL_CATEGORY_KEYS) {
+    for (const name of grouped[key] ?? []) {
+      const trimmed = name.trim();
+      if (!trimmed) continue;
+      skills.push({
+        name: sanitizeString(trimmed) ?? trimmed,
+        category: SKILL_CATEGORY_KEY_TO_ENUM[key],
+        proficiency: null,
+      });
+    }
+  }
+  return skills;
+}
+
+// Flattens the grouped {github: "...", linkedin: "...", ...} shape (v3
+// prompt) back into the flat NormalizedSocialLink[] the resume mapper
+// expects.
+function flattenGroupedSocialLinks(
+  grouped: PortfolioParseData['socialLinks'],
 ): NormalizedSocialLink[] {
-  return (items ?? [])
-    .map((item) => ({
-      platform: sanitizeString(item.platform) ?? '',
-      url: normalizeUrl(item.url) ?? '',
-    }))
-    .filter((item) => item.platform && item.url);
+  if (!grouped) return [];
+  const links: NormalizedSocialLink[] = [];
+  for (const key of SOCIAL_PLATFORM_KEYS) {
+    const url = normalizeUrl(grouped[key]);
+    if (!url) continue;
+    links.push({ platform: SOCIAL_PLATFORM_LABELS[key], url });
+  }
+  return links;
 }
 
 export function normalizePortfolioData(
   data: PortfolioParseData,
 ): NormalizedPortfolioData {
-  const skills: NormalizedSkill[] = (data.skills ?? [])
-    .filter((s) => s.name.trim().length > 0)
-    .map((s) => ({
-      name: sanitizeString(s.name) ?? s.name.trim(),
-      category: s.category,
-      proficiency: s.proficiency ?? null,
-    }));
-
+  const skills = flattenGroupedSkills(data.skills);
   const experience = normalizeExperience(data.experience);
 
   return {
@@ -264,6 +291,6 @@ export function normalizePortfolioData(
     education: normalizeEducation(data.education),
     certifications: normalizeCertifications(data.certifications),
     achievements: normalizeAchievements(data.achievements),
-    socialLinks: normalizeSocialLinks(data.socialLinks),
+    socialLinks: flattenGroupedSocialLinks(data.socialLinks),
   };
 }

@@ -25,7 +25,9 @@ export default function RootLayout({
     <html lang="en" className={`h-full antialiased`}>
       <ReduxProvider>
         <AuthProvider>
-          <body className={`min-h-full flex flex-col ${geist.className}`}>
+          <body
+            className={`min-h-full flex flex-col bg-background ${geist.className}`}
+          >
             {children}
             <Toaster position="top-right" richColors closeButton />
           </body>

@@ -19,7 +19,7 @@ export default function PageLayout({
   return (
     <div className="min-h-screen bg-background">
       {header}
-      <main className={cn("py-8 sm:py-12 md:py-16 lg:py-20", className)}>
+      <main className={cn("py-4 sm:py-4 md:py-8 lg:py-8", className)}>
         <ContentContainer>{children}</ContentContainer>
       </main>
     </div>

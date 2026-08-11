@@ -36,7 +36,7 @@ export default function ResumeSummaryCard({
   projectsCount,
 }: ResumeSummaryCardProps) {
   return (
-    <Card className="flex items-center gap-4 p-5 sm:p-6">
+    <Card className="flex items-center gap-4">
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
         aria-hidden="true"
@@ -44,14 +44,21 @@ export default function ResumeSummaryCard({
         <FileText size={20} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-text sm:text-base">
-          {resume.fileName}
-        </p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-textMuted sm:text-sm">
-          <Badge variant={STATUS_VARIANT[resume.status]}>{STATUS_LABEL[resume.status]}</Badge>
-          <span>{skillsCount} Skills</span>
-          <span aria-hidden="true">·</span>
-          <span>{projectsCount} Projects</span>
+        <div className="flex justify-between">
+          <div className="">
+            <p className="truncate text-sm font-semibold text-text sm:text-lg">
+              {resume.fileName}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400 sm:text-sm">
+              <span>{skillsCount} Skills</span>
+              <span aria-hidden="true">·</span>
+              <span>{`${projectsCount} ${projectsCount > 1 ? "Projects" : "Project"}`}</span>
+            </div>
+          </div>
+
+          <Badge variant={STATUS_VARIANT[resume.status]}>
+            {STATUS_LABEL[resume.status]}
+          </Badge>
         </div>
       </div>
     </Card>

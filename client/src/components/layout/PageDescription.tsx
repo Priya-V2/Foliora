@@ -12,12 +12,7 @@ export default function PageDescription({
   className,
 }: PageDescriptionProps) {
   return (
-    <p
-      className={cn(
-        "mt-3 text-base leading-6 text-textMuted sm:mt-3",
-        className,
-      )}
-    >
+    <p className={cn("mt-3 text-base leading-6 text-textMuted", className)}>
       {children}
     </p>
   );

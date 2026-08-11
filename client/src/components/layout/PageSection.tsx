@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 type PageSectionSpacing = "primary" | "supporting";
 
 const spacingClasses: Record<PageSectionSpacing, string> = {
-  primary: "mt-8 sm:mt-10 lg:mt-12",
-  supporting: "mt-6 sm:mt-8 md:mt-10",
+  primary: "mt-8 sm:mt-10 lg:mt-",
+  supporting: "mt-6 sm:mt-8 md:mt-4",
 };
 
 interface PageSectionProps {

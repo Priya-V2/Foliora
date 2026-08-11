@@ -4,9 +4,10 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
 import Button from "@/components/ui/Button";
-import ContentContainer from "@/components/layout/ContentContainer";
+import Card from "@/components/ui/Card";
 import PageDescription from "@/components/layout/PageDescription";
 import PageHeader from "@/components/layout/PageHeader";
+import PageLayout from "@/components/layout/PageLayout";
 import PageSection from "@/components/layout/PageSection";
 import PageTitle from "@/components/layout/PageTitle";
 import Skeleton from "@/components/ui/Skeleton";
@@ -77,147 +78,166 @@ export default function ReviewParsedDataPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-background pb-24 lg:pb-16">
-        <PageHeader />
+      {/* Explicit pb override at every PageLayout breakpoint (not just the
+          base value) so it reliably beats PageLayout's own responsive
+          `py-*` bottom padding at sm/md too - reserves clearance for the
+          fixed mobile/tablet action bar below `lg`, where the wider pb-16
+          matches the inline desktop action bar's own spacing. */}
+      <PageLayout
+        header={<PageHeader stepNumber={2} />}
+        className="pb-24 sm:pb-24 md:pb-24 lg:pb-16"
+      >
+        {/* <OnboardingStepper currentStep={2} /> */}
 
-        <ContentContainer className="pt-6 sm:pt-8">
-          <OnboardingStepper currentStep={2} />
-
-          <PageSection spacing="supporting">
+        <PageSection spacing="supporting">
+          <div className="flex gap-3 items-center">
             <Sparkles size={22} className="text-primary" aria-hidden="true" />
-            <PageTitle className="mt-3 text-2xl sm:text-3xl">Review Your Portfolio Data</PageTitle>
-            <PageDescription>
-              We&apos;ve extracted information from your resume using AI. Please review
-              everything before generating your portfolio.
-            </PageDescription>
-          </PageSection>
+            <PageTitle>Review Your Portfolio Data</PageTitle>
+          </div>
+          <PageDescription>
+            We&apos;ve extracted information from your resume using AI. Please
+            review everything before generating your portfolio.
+          </PageDescription>
+        </PageSection>
 
-          <PageSection spacing="supporting" className="space-y-5 pb-6">
-            {status === "loading" && (
-              <>
-                <Skeleton className="h-24 w-full rounded-2xl" />
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Skeleton key={index} className="h-40 w-full rounded-2xl" />
-                ))}
-              </>
-            )}
-
-            {status === "error" && (
-              <div className="rounded-2xl border border-danger/30 bg-danger/5 p-8 text-center">
-                <p className="text-sm text-danger">{error}</p>
-                <Button variant="secondary" className="mt-4" onClick={() => void refetch()}>
-                  Try Again
-                </Button>
-              </div>
-            )}
-
-            {status === "success" && !portfolio && (
-              <div className="rounded-2xl border border-border bg-surface p-8 text-center shadow-card">
-                <p className="text-sm text-textMuted">
-                  We couldn&apos;t find any parsed portfolio data yet. Upload and parse a
-                  resume first.
-                </p>
-                <Button className="mt-4" onClick={() => router.push(PREVIOUS_STEP_ROUTE)}>
-                  Upload a Resume
-                </Button>
-              </div>
-            )}
-
-            {hasPortfolio && portfolio && (
-              <>
-                {resume && (
-                  <ResumeSummaryCard
-                    resume={resume}
-                    skillsCount={portfolio.skills.length}
-                    projectsCount={portfolio.projects.length}
-                  />
-                )}
-
-                <PersonalInfoSection
-                  personalInfo={portfolio.personalInfo}
-                  onSave={updatePersonalInfo}
-                />
-                <ExperienceSection
-                  experiences={portfolio.experiences}
-                  onAdd={addExperience}
-                  onEdit={editExperience}
-                  onRemove={removeExperience}
-                />
-                <EducationSection
-                  educations={portfolio.educations}
-                  onAdd={addEducation}
-                  onEdit={editEducation}
-                  onRemove={removeEducation}
-                />
-                <SkillsSection
-                  skills={portfolio.skills}
-                  onAdd={addSkill}
-                  onEdit={editSkill}
-                  onRemove={removeSkill}
-                />
-                <ProjectsSection
-                  projects={portfolio.projects}
-                  onAdd={addProject}
-                  onEdit={editProject}
-                  onRemove={removeProject}
-                />
-                <CertificationsSection
-                  certifications={portfolio.certifications}
-                  onAdd={addCertification}
-                  onEdit={editCertification}
-                  onRemove={removeCertification}
-                />
-                <AchievementsSection
-                  achievements={portfolio.achievements}
-                  onAdd={addAchievement}
-                  onEdit={editAchievement}
-                  onRemove={removeAchievement}
-                />
-                <SocialLinksSection
-                  socialLinks={portfolio.socialLinks}
-                  onAdd={addSocialLink}
-                  onEdit={editSocialLink}
-                  onRemove={removeSocialLink}
-                />
-              </>
-            )}
-          </PageSection>
-
-          {hasPortfolio && (
-            <div className="hidden items-center justify-between border-t border-border pt-6 lg:flex">
-              <Button variant="secondary" onClick={() => router.push(PREVIOUS_STEP_ROUTE)}>
-                <ArrowLeft size={16} aria-hidden="true" />
-                Back
-              </Button>
-              <div className="flex items-center gap-4">
-                <p className="text-sm text-textMuted">
-                  Data looks correct? Let&apos;s enhance your content.
-                </p>
-                <Button onClick={() => router.push(NEXT_STEP_ROUTE)}>
-                  Continue
-                  <ArrowRight size={16} aria-hidden="true" />
-                </Button>
-              </div>
-            </div>
+        <PageSection
+          spacing="supporting"
+          className="space-y-5 md:space-y-6 pb-6"
+        >
+          {status === "loading" && (
+            <>
+              <Skeleton className="h-24 w-full rounded-2xl" />
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="h-40 w-full rounded-2xl" />
+              ))}
+            </>
           )}
-        </ContentContainer>
+
+          {status === "error" && (
+            <Card className="border-danger/30 bg-danger/5 text-center px-4 py-2">
+              <p className="text-sm text-danger">{error}</p>
+              <Button
+                variant="secondary"
+                className="mt-4"
+                onClick={() => void refetch()}
+              >
+                Try Again
+              </Button>
+            </Card>
+          )}
+
+          {status === "success" && !portfolio && (
+            <Card className="p-6 text-center sm:p-8">
+              <p className="text-sm text-textMuted">
+                We couldn&apos;t find any parsed portfolio data yet. Upload and
+                parse a resume first.
+              </p>
+              <Button
+                className="mt-4"
+                onClick={() => router.push(PREVIOUS_STEP_ROUTE)}
+              >
+                Upload a Resume
+              </Button>
+            </Card>
+          )}
+
+          {hasPortfolio && portfolio && (
+            <>
+              {resume && (
+                <ResumeSummaryCard
+                  resume={resume}
+                  skillsCount={portfolio.skills.length}
+                  projectsCount={portfolio.projects.length}
+                />
+              )}
+
+              <PersonalInfoSection
+                personalInfo={portfolio.personalInfo}
+                onSave={updatePersonalInfo}
+              />
+              <ExperienceSection
+                experiences={portfolio.experiences}
+                onAdd={addExperience}
+                onEdit={editExperience}
+                onRemove={removeExperience}
+              />
+              <EducationSection
+                educations={portfolio.educations}
+                onAdd={addEducation}
+                onEdit={editEducation}
+                onRemove={removeEducation}
+              />
+              <SkillsSection
+                skills={portfolio.skills}
+                onAdd={addSkill}
+                onEdit={editSkill}
+                onRemove={removeSkill}
+              />
+              <ProjectsSection
+                projects={portfolio.projects}
+                onAdd={addProject}
+                onEdit={editProject}
+                onRemove={removeProject}
+              />
+              <CertificationsSection
+                certifications={portfolio.certifications}
+                onAdd={addCertification}
+                onEdit={editCertification}
+                onRemove={removeCertification}
+              />
+              <AchievementsSection
+                achievements={portfolio.achievements}
+                onAdd={addAchievement}
+                onEdit={editAchievement}
+                onRemove={removeAchievement}
+              />
+              <SocialLinksSection
+                socialLinks={portfolio.socialLinks}
+                onAdd={addSocialLink}
+                onEdit={editSocialLink}
+                onRemove={removeSocialLink}
+              />
+            </>
+          )}
+        </PageSection>
 
         {hasPortfolio && (
-          <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-border bg-surface p-4 lg:hidden">
+          <div className="hidden items-center justify-between border-t border-border pt-6 lg:flex">
             <Button
               variant="secondary"
               onClick={() => router.push(PREVIOUS_STEP_ROUTE)}
-              aria-label="Back"
             >
               <ArrowLeft size={16} aria-hidden="true" />
+              Back
             </Button>
-            <Button fullWidth onClick={() => router.push(NEXT_STEP_ROUTE)}>
-              Continue
-              <ArrowRight size={16} aria-hidden="true" />
-            </Button>
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-textMuted">
+                Data looks correct? Let&apos;s enhance your content.
+              </p>
+              <Button onClick={() => router.push(NEXT_STEP_ROUTE)}>
+                Continue
+                <ArrowRight size={16} aria-hidden="true" />
+              </Button>
+            </div>
           </div>
         )}
-      </div>
+      </PageLayout>
+
+      {hasPortfolio && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-border bg-surface p-4 lg:hidden">
+          <Button
+            variant="secondary"
+            onClick={() => router.push(PREVIOUS_STEP_ROUTE)}
+            aria-label="Back"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+          </Button>
+          <Button fullWidth onClick={() => router.push(NEXT_STEP_ROUTE)}>
+            Continue
+            <ArrowRight size={16} aria-hidden="true" />
+          </Button>
+        </div>
+      )}
     </ProtectedRoute>
   );
 }

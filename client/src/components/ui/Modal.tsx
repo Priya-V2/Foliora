@@ -78,7 +78,7 @@ export default function Modal({
               maxWidthClassName,
             )}
           >
-            <div className="flex items-start justify-between gap-4 px-8 pt-8">
+            <div className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-8 sm:pt-8">
               <div>
                 <h2 id="modal-title" className="text-xl font-semibold text-text">
                   {title}
@@ -92,10 +92,10 @@ export default function Modal({
               </IconButton>
             </div>
 
-            <div className="overflow-y-auto px-8 py-6">{children}</div>
+            <div className="overflow-y-auto px-5 py-4 sm:px-8 sm:py-6">{children}</div>
 
             {footer && (
-              <div className="flex items-center justify-end gap-3 border-t border-border px-8 py-5">
+              <div className="flex items-center justify-end gap-3 border-t border-border px-5 py-4 sm:px-8 sm:py-5">
                 {footer}
               </div>
             )}

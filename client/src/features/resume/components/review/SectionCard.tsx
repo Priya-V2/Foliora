@@ -29,12 +29,12 @@ export default function SectionCard({
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <Card className={cn("overflow-hidden", className)}>
+    <Card padding="none" className={cn("overflow-hidden", className)}>
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-expanded={isOpen}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-surfaceAlt/40 sm:px-6 sm:py-5"
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-surfaceAlt/40 md:px-6 md:py-5"
       >
         <span className="flex items-center gap-2.5 text-base font-semibold text-text sm:text-lg">
           <Icon size={18} className="text-primary" aria-hidden="true" />
@@ -56,7 +56,7 @@ export default function SectionCard({
       </button>
 
       {isOpen && (
-        <div className="border-t border-border px-5 py-5 sm:px-6 sm:py-6">
+        <div className="border-t border-border px-5 py-5 md:px-6 md:py-6">
           {children}
         </div>
       )}

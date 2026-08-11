@@ -5,12 +5,12 @@ interface PageTitleProps {
   className?: string;
 }
 
-// Foliora's single page-title scale: text-3xl on mobile, text-4xl from sm+.
+// Foliora's single page-title scale: text-2xl on mobile, text-3xl from sm+.
 export default function PageTitle({ children, className }: PageTitleProps) {
   return (
     <h1
       className={cn(
-        "text-3xl font-bold tracking-tight text-text sm:text-3xl",
+        "text-2xl font-bold tracking-tight text-text lg:text-3xl",
         className,
       )}
     >

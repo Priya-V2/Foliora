@@ -1,5 +1,6 @@
-import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "react-tooltip";
+import "react-tooltip/dist/react-tooltip.css";
 
 const ONBOARDING_STEPS = [
   "Upload Resume",
@@ -15,77 +16,67 @@ interface OnboardingStepperProps {
   className?: string;
 }
 
-// Shared "Step X of 5" progress chrome for the resume onboarding flow.
-// Desktop shows the full breadcrumb (see reference screenshots); mobile and
-// tablet collapse to a compact "Step X of 5" label + progress bar (see
-// docs/design-system.md "Progress": 8px height, pill radius, indigo fill).
 export default function OnboardingStepper({
   currentStep,
   className,
 }: OnboardingStepperProps) {
   const total = ONBOARDING_STEPS.length;
-  const percent = Math.round((currentStep / total) * 100);
 
   return (
-    <div className={className}>
-      <ol
-        className="hidden items-center gap-2 text-sm lg:flex"
-        aria-label="Onboarding progress"
-      >
-        {ONBOARDING_STEPS.map((label, index) => {
-          const step = index + 1;
-          const isDone = step < currentStep;
-          const isCurrent = step === currentStep;
+    <div
+      className={cn("group relative", className)}
+      tabIndex={0}
+      id="onboarding-step-details"
+    >
+      {/* Compact step indicator */}
+      <div className="flex items-center justify-between text-base">
+        <span className="font-semibold text-text">
+          Step {currentStep} of {total}
+        </span>
+      </div>
 
-          return (
-            <li key={label} className="flex items-center gap-2">
-              {index > 0 && (
-                <span className="text-border" aria-hidden="true">
-                  /
-                </span>
-              )}
-              <span
-                aria-current={isCurrent ? "step" : undefined}
+      {/* Step details tooltip */}
+      <Tooltip
+        anchorSelect={"[id='onboarding-step-details']"}
+        place="bottom"
+        className="bg-surface! border border-border! text-text rounded-xl p-4 w-64"
+        style={{ zIndex: 9999 }}
+      >
+        <ol className="space-y-2.5">
+          {ONBOARDING_STEPS.map((label, index) => {
+            const step = index + 1;
+            const isDone = step < currentStep;
+            const isCurrent = step === currentStep;
+
+            return (
+              <li
+                key={label}
                 className={cn(
-                  "flex items-center gap-1 font-medium",
-                  isCurrent
-                    ? "text-primary"
-                    : isDone
-                      ? "text-text"
-                      : "text-textMuted",
+                  "flex items-center gap-3 text-sm",
+                  isDone && "text-success",
+                  isCurrent && "font-semibold text-primary",
+                  !isDone && !isCurrent && "text-textMuted",
                 )}
               >
-                {isDone && <Check size={14} aria-hidden="true" />}
-                Step {step}: {label}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+                <span
+                  className={cn(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs font-medium",
+                    isDone && "border-success/30 bg-success/10 text-success",
+                    isCurrent && "border-primary/30 bg-primary/10 text-primary",
+                    !isDone &&
+                      !isCurrent &&
+                      "border-border bg-surfaceAlt text-textMuted",
+                  )}
+                >
+                  {isDone ? "✓" : step}
+                </span>
 
-      <div className="lg:hidden">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-medium text-text">
-            Step {currentStep} of {total}
-          </span>
-          <span className="text-textMuted">
-            {ONBOARDING_STEPS[currentStep - 1]}
-          </span>
-        </div>
-        <div
-          role="progressbar"
-          aria-valuenow={percent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Onboarding progress"
-          className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surfaceAlt"
-        >
-          <div
-            className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${percent}%` }}
-          />
-        </div>
-      </div>
+                <span>{label}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </Tooltip>
     </div>
   );
 }

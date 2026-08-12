@@ -27,7 +27,7 @@ import SkillsSection from "../components/review/SkillsSection";
 import SocialLinksSection from "../components/review/SocialLinksSection";
 import { usePortfolioReview } from "../hooks/usePortfolioReview";
 
-const NEXT_STEP_ROUTE = "/onboarding/resume/enhance";
+const NEXT_STEP_ROUTE = "/onboarding/github";
 const PREVIOUS_STEP_ROUTE = "/onboarding/resume";
 
 export default function ReviewParsedDataPage() {

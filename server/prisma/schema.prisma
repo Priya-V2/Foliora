@@ -710,10 +710,26 @@ model GithubRepository {
   repoId             Int      @unique // globally unique across GitHub, not just per-connection
   name               String
   description        String?  @db.Text
-  language           String?
+  language           String? // primary language, as reported by GitHub
   stars              Int      @default(0)
   forks              Int      @default(0)
+  openIssues         Int      @default(0)
+  watchers           Int      @default(0)
   url                String
+  homepage           String? // repo's declared live/demo URL, if any
+  // Distinct from this row's own `createdAt`/`updatedAt` (cache bookkeeping):
+  // these three track the *repository's* activity on GitHub.
+  githubCreatedAt    DateTime?
+  githubUpdatedAt    DateTime?
+  pushedAt           DateTime?
+  // Byte-size-per-language breakdown from GitHub's /languages endpoint
+  // (e.g. { "TypeScript": 48213, "CSS": 2011 }), fetched lazily at import
+  // time rather than for every listed repo - see GithubApiService. Null
+  // until a sync has populated it.
+  languages          Json?
+  // Derived from `language` + `languages` at import time (see
+  // GithubImportService.deriveTechStack) - not simply equal to `language`.
+  techStack          String[] @default([])
   selected           Boolean  @default(false)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt

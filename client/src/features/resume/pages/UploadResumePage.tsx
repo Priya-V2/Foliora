@@ -28,7 +28,7 @@ function UploadResumeCard() {
   }, [dispatch]);
 
   return (
-    <PageLayout header={<PageHeader />}>
+    <PageLayout header={<PageHeader stepNumber={1} />}>
       <SectionContainer width="narrow">
         <div className="mt-3 sm:mt-4">
           <PageTitle>Upload your resume</PageTitle>

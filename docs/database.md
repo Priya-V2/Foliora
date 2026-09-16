@@ -144,6 +144,65 @@ Choose cascade behavior deliberately rather than relying on defaults.
 
 ---
 
+# Portfolio Template Identity & Version Persistence
+
+A portfolio's selected template is identified by **two** values, not one:
+
+```
+templateId
+templateVersion
+```
+
+Both must be persisted together on the portfolio record. Persisting `templateId` alone is not sufficient.
+
+`templateVersion` MUST be stored as a string and follows Semantic Versioning (`MAJOR.MINOR.PATCH`) — for example `"1.0.0"`. Bare numeric values such as `"1"` must not be used. See `PORTFOLIO_ARCHITECTURE.md` §6 and `PORTFOLIO_CONTRACTS.md` §17 for the corresponding `TemplateIdentity` contract.
+
+## Why Both Fields Are Required
+
+Template implementations are versioned independently of the database catalog entry that lists them (see `PORTFOLIO_ARCHITECTURE.md`). A template's catalog entry can move forward — for example `Modern` progressing from `v1.0.0` to `v1.1.0` — while portfolios that were already created or published against the earlier implementation must continue rendering with the version they were built against, not silently switch to the newer one.
+
+If only `templateId` were stored, a portfolio would implicitly follow the template's current version whenever the catalog entry changes, which breaks the version-stability guarantee described in `PORTFOLIO_ARCHITECTURE.md` and `TEMPLATE_RULES.md`.
+
+## Requirement
+
+- A portfolio must record the exact `templateId` + `templateVersion` pair it was built/published against.
+- That pair must remain stable across template catalog updates unless the user explicitly changes template or version.
+- Rendering resolves the template implementation using the persisted pair, not the catalog's current version.
+
+## Known Gap
+
+The current schema (`prisma/schema.prisma`) stores `Portfolio.templateId` (a foreign key to the `Template` catalog row) but has no corresponding field that snapshots the template's version at the time it was selected/published. `Template.version` reflects the catalog entry's current version, not a per-portfolio historical record, so it cannot satisfy this requirement by itself. Closing this gap requires a schema change and migration, which is an implementation decision outside the scope of this documentation update — it is recorded here rather than resolved silently.
+
+## Migration Prerequisite
+
+Before implementing any backend endpoint that allows a user to select, change, or persist a portfolio's template, the database migration adding `Portfolio.templateVersion` (or the agreed equivalent field) MUST be completed.
+
+This migration is therefore a prerequisite for:
+
+- Step 4 template selection persistence
+- Onboarding completion that persists the selected template
+- Publish/public persistence flows that depend on the portfolio's template identity
+
+The frontend/template rendering infrastructure MAY be implemented before this migration, because it can operate with explicit `templateId` + `templateVersion` values passed in directly (see `PORTFOLIO_ARCHITECTURE.md`, `PORTFOLIO_CONTRACTS.md`) without requiring the values to be persisted yet.
+
+### Implementation Order
+
+```text
+Template infrastructure
+        ↓
+Template implementations
+        ↓
+Database migration for Portfolio.templateVersion
+        ↓
+Template selection + persistence
+        ↓
+Preview / Editor / Publish / Public
+```
+
+This section documents the prerequisite only. It does not implement the migration.
+
+---
+
 # Primary Keys
 
 Every model should have:

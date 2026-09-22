@@ -110,18 +110,149 @@ export interface PortfolioData {
 # 5. ProfileData
 
 ```ts
+export interface ProfileHighlight {
+  id: string;
+  value: string;
+}
+
+export interface ProfileAvailabilityTag {
+  id: string;
+  value: string;
+}
+
 export interface ProfileData {
   name: string;
   headline?: string;
+  bio?: string;
   location?: string;
   profileImageUrl?: string;
   email?: string;
   phone?: string;
   website?: string;
+  resumeUrl?: string;
+  highlights?: ProfileHighlight[];
+  availabilityTags?: ProfileAvailabilityTag[];
 }
 ```
 
 `phone` and `website` are included because Foliora's existing personal-info data already captures this information and the Contact section (see §12) needs it.
+
+## `bio` is the Hero description, not About content
+
+`ProfileData.bio` maps from `PersonalInfo.bio` and represents the **Hero
+description** shown alongside a template's headline/name treatment.
+
+```text
+PersonalInfo.bio
+      ↓
+PortfolioData.profile.bio
+      ↓
+Hero description
+```
+
+This is explicitly a different value from `AboutData.content` (see §6):
+
+```text
+AboutData.content
+      ↓
+About section
+```
+
+**`ProfileData.bio != AboutData.content`.** The adapter must never map one
+into the other, even though both currently have only `PersonalInfo.bio` as
+a plausible source on the backend. There is currently no independent
+About-section content field in the backend/onboarding data model — see §6
+for the resulting content gap.
+
+## `highlights` — user-defined profile highlights
+
+Small, user-controlled highlight values shown near the Hero/profile
+treatment (e.g. `"3.5Y EXP"`, `"18 SHIPPED"`, `"42 REPOS"`, `"AUSTIN TX"`).
+
+- `highlights` is portfolio **content**, owned by the user — not template
+  presentation configuration. It must never live inside
+  `PortfolioSectionConfig.configuration` (see §14).
+- Values are arbitrary user-entered text. They are **not** derived from
+  `experience`, `projects`, GitHub data, or any other section — there is no
+  `yearsOfExperience` / `shippedProjects` / `repoCount` style computed
+  field in this contract.
+- `id` is stable per highlight so ordering/editing survives reload; `value`
+  is freeform.
+- Templates decide how (and whether) to visually present highlights. The
+  canonical data itself carries no template-specific meaning.
+- **Persistence status:** not yet persisted anywhere in the backend data
+  model. `PersonalInfo` has no equivalent field. Populating this array
+  today requires the caller to supply it via
+  `AdaptPortfolioOptions.highlights`; there is no source on the `Portfolio`
+  API shape to adapt from. Real persistence (a new table or column) is a
+  **Phase 3** database-migration concern.
+
+## `availabilityTags` — user-defined availability statements
+
+User-controlled, ordered availability statements (e.g. `"Open to
+Relocate"`, `"Freelance Opportunities Welcome"`, `"Open to Remote Work"`).
+
+- Modeled as an arbitrary-text tag collection, **not** an enum. This
+  contract intentionally has no `WorkAvailabilityStatus`, `WorkMode`,
+  `EngagementType`, or `openToRelocation` type/field.
+- `availabilityTags` is portfolio **content**, owned by the user — not
+  template presentation configuration. It must never live inside
+  `PortfolioSectionConfig.configuration` (see §14).
+- Templates decide how (and whether) to visually present tags (e.g. as
+  discrete pills or a single inline row). The canonical data itself carries
+  no template-specific meaning.
+- **Persistence status — existing backend field discovered:**
+  `PersonalInfo.availability` (`server/prisma/schema.prisma`) is a single
+  free-text `String?` scalar column, not a user-managed collection. The
+  adapter performs a lossless 1:1 wrap of that scalar into a
+  single-element `ProfileAvailabilityTag[]` when present. This is a
+  correct interim mapping (no data is lost or reinterpreted), but it is
+  **not** a substitute for real multi-tag support: a user cannot create a
+  second tag through this data source today. Supporting genuine
+  multiple-tag input requires a **Phase 3** schema change (e.g. a
+  one-to-many `AvailabilityTag`-style table, or converting the column to a
+  list type) plus corresponding DTO/service changes — out of scope for
+  this contract-correction pass.
+
+## Resume reference
+
+`resumeUrl` is an optional reference to the user's stored resume, letting a
+template render a functional Resume CTA without querying resume
+storage/API itself.
+
+```text
+existing resume storage (Resume.fileUrl)
+        ↓
+adapter
+        ↓
+ProfileData.resumeUrl
+        ↓
+template
+```
+
+- **Existing backend field discovered:** Foliora already has resume
+  storage — the `Resume` model (`server/prisma/schema.prisma`), with a
+  `fileUrl` column and its own upload/parsing pipeline. This is a **1:1
+  relation on `User`** (`Resume.userId @unique`), independent of
+  `Portfolio`/`PersonalInfo`, and is not currently joined into the
+  `Portfolio` API response (`PortfolioResponseDto` has no resume field).
+- No new file/image storage system is introduced by this contract. The
+  canonical field is a plain reference (URL string), matching the existing
+  `Resume.fileUrl` representation — not a new storage abstraction.
+- **No schema/persistence gap.** Because the underlying storage already
+  exists, this is a wiring gap, not a Phase 3 migration: a later phase
+  needs to join `Resume` into the portfolio query path (and add a resume
+  field to `PortfolioResponseDto`/`Portfolio`) for the adapter to resolve
+  `resumeUrl` automatically. Until then, the adapter accepts it as an
+  explicit `AdaptPortfolioOptions.resumeUrl` input, following the same
+  pattern already used for `theme` and `sections`.
+- Absence (no resume uploaded) must be handled safely: `resumeUrl` is
+  `undefined`, and templates must treat the Resume CTA as optional.
+- This also preserves the intended future flow — resume uploaded during
+  onboarding, or added later via the editor's own upload step — without
+  requiring any change to this field: both paths end at the same existing
+  resume storage, adapted into the same `resumeUrl` reference. The editor
+  upload flow itself is not implemented by this pass.
 
 ## Contact Section
 
@@ -143,6 +274,22 @@ export interface AboutData {
 
 `about` is optional because a portfolio may not contain an About section.
 
+**Content gap (discovered during the §5 correction):** the backend/onboarding
+data model currently has no field independent of `PersonalInfo.bio` that
+represents About content — `bio` is the Hero description (`ProfileData.bio`,
+see §5) and must not be reused here. As a result, `adaptAbout` currently has
+no source to populate `content` from, and `about` adapts to `undefined` for
+every portfolio until a dedicated About-content field is introduced
+upstream. This is a scope note, not something this contract-correction pass
+resolves — adding new backend fields is outside its scope.
+
+`content` is Markdown, not plain text. This is a deliberate choice over a rich-text
+document object (e.g. a TipTap/Slate JSON schema): Markdown gives the editor bold,
+italic, and paragraph breaks with no dedicated document schema to design or version,
+and it is cheaper to store/render than a nested rich-text node tree. Templates must
+render `content` through a sanitizing Markdown renderer (raw HTML in the source must
+never be trusted) — never `dangerouslySetInnerHTML` an unsanitized string.
+
 ---
 
 # 7. ExperienceData
@@ -157,8 +304,14 @@ export interface ExperienceData {
   endDate?: string;
   isCurrent?: boolean;
   description?: string;
+  highlights?: string[];
 }
 ```
+
+`highlights` holds per-role bullet-point achievements (e.g. "Led migration to X",
+"Shipped Y, improving Z by 40%"), separate from `description`. Most portfolio/resume
+presentations render roles as bullets rather than prose — `description` remains
+available for a short summary/context paragraph where a template wants one.
 
 ---
 

@@ -43,7 +43,6 @@ import type {
   ProfileHighlight,
   ProjectData,
   SkillData,
-  SkillLevel,
   SocialLinkData,
 } from "../types/portfolio-data.types";
 
@@ -73,7 +72,10 @@ function adaptAvailabilityTags(
   return [{ id: "availability-0", value: availability }];
 }
 
-function adaptProfile(portfolio: Portfolio, options: AdaptPortfolioOptions): ProfileData {
+function adaptProfile(
+  portfolio: Portfolio,
+  options: AdaptPortfolioOptions,
+): ProfileData {
   const personalInfo = portfolio.personalInfo;
 
   return {
@@ -118,7 +120,8 @@ function adaptExperience(experience: Experience): ExperienceData {
     description: nullToUndefined(experience.description),
     // Source field is `achievements` (per-role bullet points); canonical
     // contract names it `highlights` to stay distinct from AchievementData.
-    highlights: experience.achievements.length > 0 ? experience.achievements : undefined,
+    highlights:
+      experience.achievements.length > 0 ? experience.achievements : undefined,
   };
 }
 
@@ -134,23 +137,11 @@ function adaptEducation(education: Education): EducationData {
   };
 }
 
-// The app's 1-5 proficiency scale is lossily bucketed into the canonical
-// 4-value SkillLevel. Adjust here (not in templates) if the mapping needs
-// to change.
-function adaptSkillLevel(proficiency: number | null): SkillLevel | undefined {
-  if (proficiency == null) return undefined;
-  if (proficiency <= 2) return "beginner";
-  if (proficiency === 3) return "intermediate";
-  if (proficiency === 4) return "advanced";
-  return "expert";
-}
-
 function adaptSkill(skill: Skill): SkillData {
   return {
     id: skill.id,
     name: skill.name,
     category: skill.category,
-    level: adaptSkillLevel(skill.proficiency),
   };
 }
 
@@ -201,10 +192,10 @@ function adaptSocialLink(socialLink: SocialLink): SocialLinkData {
 
 const DEFAULT_SECTION_ORDER: PortfolioSectionType[] = [
   "about",
-  "experience",
-  "education",
   "skills",
+  "experience",
   "projects",
+  "education",
   "certifications",
   "achievements",
   "social",
@@ -229,13 +220,16 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 // Normalizes the raw `Portfolio.theme` Json? column into PortfolioTheme.
 // Unknown/malformed keys are dropped rather than passed through, so raw
 // database JSON never leaks into a template unvalidated.
-export function normalizePortfolioTheme(raw: unknown): PortfolioTheme | undefined {
+export function normalizePortfolioTheme(
+  raw: unknown,
+): PortfolioTheme | undefined {
   if (!isPlainObject(raw)) return undefined;
 
   const theme: PortfolioTheme = {};
   if (typeof raw.accentColor === "string") theme.accentColor = raw.accentColor;
   if (typeof raw.fontFamily === "string") theme.fontFamily = raw.fontFamily;
-  if (typeof raw.backgroundColor === "string") theme.backgroundColor = raw.backgroundColor;
+  if (typeof raw.backgroundColor === "string")
+    theme.backgroundColor = raw.backgroundColor;
   if (typeof raw.textColor === "string") theme.textColor = raw.textColor;
 
   return Object.keys(theme).length > 0 ? theme : undefined;
@@ -274,7 +268,9 @@ export function adaptPortfolioToPortfolioData(
     education: byDisplayOrder(portfolio.educations).map(adaptEducation),
     skills: byDisplayOrder(portfolio.skills).map(adaptSkill),
     projects: byDisplayOrder(portfolio.projects).map(adaptProject),
-    certifications: byDisplayOrder(portfolio.certifications).map(adaptCertification),
+    certifications: byDisplayOrder(portfolio.certifications).map(
+      adaptCertification,
+    ),
     achievements: byDisplayOrder(portfolio.achievements).map(adaptAchievement),
     socialLinks: byDisplayOrder(portfolio.socialLinks).map(adaptSocialLink),
     sections: options.sections ?? buildDefaultSections(),

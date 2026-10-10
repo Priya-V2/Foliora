@@ -31,13 +31,20 @@ import {
   type RendererDefinition,
 } from "../types/template.types";
 
-type CardPreviewModule = { default: CardPreviewDefinition } | CardPreviewDefinition;
+// an obj with 3 fields, templateId, templateVersion, cardPreview (a react component which must accept
+// portfolioData as props) - RendererModule is similar but for the RendererModule
+type CardPreviewModule =
+  { default: CardPreviewDefinition } | CardPreviewDefinition;
 type RendererModule = { default: RendererDefinition } | RendererDefinition;
 
+// a type definiton that describes the shape of a function that returns a promise that resolves
+// to a CardPreviewModule - RendererModule is similar but for the RendererModule
 type CardPreviewLoader = () => Promise<CardPreviewModule>;
 type RendererLoader = () => Promise<RendererModule>;
 
-function isModuleWrapper<T extends object>(mod: { default: T } | T): mod is { default: T } {
+function isModuleWrapper<T extends object>(
+  mod: { default: T } | T,
+): mod is { default: T } {
   return "default" in mod;
 }
 
@@ -48,7 +55,10 @@ function makeKey(templateId: string, templateVersion: string): string {
 const cardPreviewLoaders = new Map<string, CardPreviewLoader>();
 const rendererLoaders = new Map<string, RendererLoader>();
 
-function assertValidTemplateVersion(templateId: string, templateVersion: string): void {
+function assertValidTemplateVersion(
+  templateId: string,
+  templateVersion: string,
+): void {
   if (!isValidTemplateVersion(templateVersion)) {
     throw new Error(
       `Invalid templateVersion "${templateVersion}" for template "${templateId}": must be SemVer (MAJOR.MINOR.PATCH).`,
@@ -112,7 +122,10 @@ export async function resolveCardPreview(
   // Guards against a misconfigured loader resolving to a mismatched
   // definition — resolution must never silently hand back a different
   // template/version than the one requested.
-  if (definition.templateId !== templateId || definition.templateVersion !== templateVersion) {
+  if (
+    definition.templateId !== templateId ||
+    definition.templateVersion !== templateVersion
+  ) {
     return null;
   }
 
@@ -139,7 +152,10 @@ export async function resolveRenderer(
   // Guards against a misconfigured loader resolving to a mismatched
   // definition — resolution must never silently hand back a different
   // template/version than the one requested.
-  if (definition.templateId !== templateId || definition.templateVersion !== templateVersion) {
+  if (
+    definition.templateId !== templateId ||
+    definition.templateVersion !== templateVersion
+  ) {
     return null;
   }
 

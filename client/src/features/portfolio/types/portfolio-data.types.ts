@@ -61,7 +61,7 @@ export interface ExperienceData {
   startDate: string;
   endDate?: string;
   isCurrent?: boolean;
-  description?: string;
+  description?: string; //Markdown, sanitize on render
   highlights?: string[];
 }
 
@@ -73,28 +73,32 @@ export interface EducationData {
   location?: string;
   startDate?: string;
   endDate?: string;
-  description?: string;
+  description?: string; //Markdown, sanitize on render
 }
-
-export type SkillLevel = "beginner" | "intermediate" | "advanced" | "expert";
 
 export interface SkillData {
   id: string;
   name: string;
   category?: string;
-  level?: SkillLevel;
 }
 
 export interface ProjectData {
   id: string;
   name: string;
-  description?: string;
+  description?: string; //Markdown, sanitize on render
   imageUrl?: string;
   technologies?: string[];
   liveUrl?: string;
   repositoryUrl?: string;
   startDate?: string;
   endDate?: string;
+}
+
+export interface ExpertiseData {
+  id: string;
+  title: string;
+  description: string; // Markdown, sanitize on render
+  skills?: string[];
 }
 
 export interface CertificationData {
@@ -110,7 +114,7 @@ export interface CertificationData {
 export interface AchievementData {
   id: string;
   title: string;
-  description?: string;
+  description?: string; //Markdown, sanitize on render
   metric?: string;
   achievedAt?: string;
 }
@@ -131,6 +135,7 @@ export type PortfolioSectionType =
   | "education"
   | "skills"
   | "projects"
+  | "expertise"
   | "certifications"
   | "achievements"
   | "contact"
@@ -163,6 +168,7 @@ export interface PortfolioData {
   education: EducationData[];
   skills: SkillData[];
   projects: ProjectData[];
+  expertise?: ExpertiseData[]; // A specific section of work, capability, service, or specialization the user wants to highlight
   certifications: CertificationData[];
   achievements: AchievementData[];
 

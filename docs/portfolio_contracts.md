@@ -339,13 +339,8 @@ export interface SkillData {
   id: string;
   name: string;
   category?: string;
-  level?: SkillLevel;
 }
-
-export type SkillLevel = "beginner" | "intermediate" | "advanced" | "expert";
 ```
-
-`level` is optional because templates must not assume every portfolio provides a skill rating.
 
 ---
 
